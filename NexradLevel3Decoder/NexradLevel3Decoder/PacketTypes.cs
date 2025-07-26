@@ -555,38 +555,6 @@ public class PacketTypes
 				for (j = numberOfRadials - (numberOfRadials % Vector<float>.Count); j < numberOfRadials; j++)
 					processedBins[i] = minDataValue + (bins[i] * dataIncrement);
 
-			/*int j = 0;
-			for (; j < numberOfRangeBins; j++)
-			{
-				byte value = readByte(reader);
-				float? processedValue = null;
-
-				// digital vil is a special case, since the offset and scale is different if the digital vil value is over a threshold (starting since build 9)
-				if (code == MessageCode.DigitalVerticallyIntegratedLiquid)
-					processedValue = value < digitalLogStart ? (value - linearOffset) / linearScale : MathF.Exp((value - logOffset) / logScale);
-
-				if (scale != float.MinValue && offset != float.MinValue)
-					processedValue = (value - offset) / scale;					
-
-				// add raw values
-				binsRaw[j] = value;
-
-				// add processed values
-				if (scaled.Count > 0)
-					// product uses scaled dictionary, so reprocess the value and use the dictionary
-					bins[j] = (value <= (short)dataLevels) ? scaled[value] : float.NaN;
-				else
-					// product uses its own offset and scale values, so use those instead
-					bins[j] = processedValue ?? float.NaN;
-
-				if (code == MessageCode.HydrometeorClassification)
-					alphanumericBins[i] = hydrometeorClassMap[value];
-				else if (code == MessageCode.HybridHydrometeorClassification)
-					alphanumericBins[i] = hybridHydrometeorClassMap[value];
-				else if (code == MessageCode.RainRateClassification)
-					alphanumericBins[i] = rainRateClassMap[value];
-			}*/
-
 			Radial255 radial = new()
 			{
 				StartAngle = startAngle,
