@@ -1,3 +1,9 @@
+For sources of Nexrad level 3 data, refer to these urls:
+1. ftp://tgftp.nws.noaa.gov/ (FTP server, go to **/SL.us008001/DF.of/DC.radar/** for the data. Can be used in Windows file explorer)
+2. https://registry.opendata.aws/noaa-nexrad/
+3. https://console.cloud.google.com/storage/browser/gcp-public-data-nexrad-l3;tab=objects?pli=1&invt=AbulJA&prefix=&forceOnObjectsSortingFiltering=false
+4. https://console.cloud.google.com/storage/browser/gcp-public-data-nexrad-l3-realtime;tab=objects?inv=1&invt=Ab30-A&prefix=&forceOnObjectsSortingFiltering=false&pageState=(%22StorageObjectListTable%22:(%22f%22:%22%255B%255D%22)) (for real time level 3 from Google)
+
 # Nexrad.NET
 ---
 Nexrad.NET is a C# library created for the purpose of reading and processing NEXRAD Level 3 radar files.
