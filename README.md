@@ -7,7 +7,7 @@ Nexrad.NET is a C# library created for the purpose of reading and processing NEX
 
 ### Basic Usage
 This library is pretty straightfoward in its usage.
-Here is a basic example of decoding a super resolution base reflectivity file:
+Here is a basic example of decoding a radar file:
 ```cs
 BinaryReader reader = new(File.OpenRead("super_res_base_ref_file"));
 Level3 level3 = new(ref reader);
