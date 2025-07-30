@@ -1,4 +1,4 @@
-﻿using static Azrellie.Meteorology.NexradNet.Level3.Util;
+using static Azrellie.Meteorology.NexradNet.Level3.Util;
 
 namespace Azrellie.Meteorology.NexradNet.Level3;
 
@@ -136,7 +136,7 @@ public record Halfwords30_53
 		{
 			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
 			plot.Add("minDataValue", readShort(reader) / 10); // plot data per noaa documentation on page 36 build 23
-			plot.Add("dataIncrement", (float)readShort(reader));
+			plot.Add("dataIncrement", readShort(reader) / 10f);
 			plot.Add("dataLevels", readShort(reader) + 1); // not in documentation, but this is 254 instead of 255 for whatever reason
 			reader.BaseStream.Seek(26, SeekOrigin.Current);
 			productDescriptionData.Add("maxNegativeVelocity", readShort(reader));
@@ -150,7 +150,7 @@ public record Halfwords30_53
 		{
 			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
 			plot.Add("minDataValue", readShort(reader) / 10); // plot data per noaa documentation on page 36 build 23
-			plot.Add("dataIncrement", (float)readShort(reader));
+			plot.Add("dataIncrement", readShort(reader));
 			plot.Add("dataLevels", readShort(reader));
 			reader.BaseStream.Seek(26, SeekOrigin.Current);
 			productDescriptionData.Add("maxNegativeVelocity", readShort(reader));
