@@ -1,4 +1,4 @@
-﻿using static Azrellie.Meteorology.NexradNet.Level3.Util;
+using static Azrellie.Meteorology.NexradNet.Level3.Util;
 using static Azrellie.Meteorology.NexradNet.Level3.Enums;
 using System.Text;
 using System.Numerics;
@@ -456,7 +456,6 @@ public class PacketTypes
 		float minDataValue = float.MinValue;
 		Dictionary<int, float> scaled = [];
 
-
 		if (productDescription.ProductData2.plot.TryGetValue("maxDataValue", out object? _))
 		{
 			scale = (float)productDescription.ProductData2.plot["scale"];
@@ -467,7 +466,7 @@ public class PacketTypes
 		{
 			dataIncrement = (float)productDescription.ProductData2.plot["dataIncrement"];
 			minDataValue = (int)productDescription.ProductData2.plot["minDataValue"];
-			for (int n = 0; n <= (int)dataLevels; n++)
+			for (short n = 0; n <= (short)dataLevels; n++)
 				scaled[n] = minDataValue + (n * dataIncrement);
 		}
 
