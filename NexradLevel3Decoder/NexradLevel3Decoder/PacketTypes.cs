@@ -467,7 +467,7 @@ public class PacketTypes
 		{
 			dataIncrement = (float)productDescription.ProductData2.plot["dataIncrement"];
 			minDataValue = (int)productDescription.ProductData2.plot["minDataValue"];
-			for (int n = 0; n <= (short)dataLevels; n++)
+			for (int n = 0; n <= (int)dataLevels; n++)
 				scaled[n] = minDataValue + (n * dataIncrement);
 		}
 
