@@ -5,6 +5,7 @@ namespace Azrellie.Meteorology.NexradNet.Level3;
 // for data about each product between halfwords 30-53, refer to table V on the wsr88d format documentation https://www.roc.noaa.gov/public-documents/icds/2620001AC.pdf
 // halfword 51 is present on all products, indicating whether the data is compressed or not using bzip2. if it is compressed, halfwords 52 and 53 will indicate the size of the uncompressed data, if not, they will be empty halfwords and can be skipped
 // to get the size of the uncompressed data, take halfword 52, bit shift it 16 times to the left, and add halfword 53 to the bit shifted halfword 52
+// more information can be found about older/legacy products at https://www.roc.noaa.gov/public-documents/icds/2620001P.pdf
 
 /// <summary>
 /// This refers to the type of data that may be present at halfwords 30 and 53 based on radar product. If no data is present, productDescriptionData will have no keys/values.
@@ -29,7 +30,6 @@ public record Halfwords30_53
 		return coefficient;
 	}
 
-	// add the rest of the plots to the other products
 	public Halfwords30_53(BinaryReader reader, Level3 self)
 	{
 		if (self.ProductDescription == null)
@@ -37,7 +37,8 @@ public record Halfwords30_53
 			self.INTERNAL_debugLog($"[PRODUCT DESCRIPTION] Checking halfwords 30 to 53 for product specific data...", ConsoleColor.Yellow);
 			self.INTERNAL_debugLog($"[PRODUCT DESCRIPTION] {self.Header.MessageCode} product detected. Extracting data...", ConsoleColor.Yellow);
 		}
-		if (self.Header.MessageCode == Enums.MessageCode.StormTotalAccumulation)
+		var code = self.Header.MessageCode;
+		if (code == Enums.MessageCode.StormTotalAccumulation)
 		{
 			// if null product flag is 0, then accumulation is present in the product. non 0 indicates no accumulation in the product
 			productDescriptionData.Add("nullProductFlag", readShort(reader));
@@ -48,26 +49,30 @@ public record Halfwords30_53
 			plot.Add("minDataValue", 0);
 			plot.Add("leadingFlags", readShort(reader));
 			plot.Add("trailingFlags", readShort(reader));
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 			reader.BaseStream.Seek(16, SeekOrigin.Current);
-			productDescriptionData.Add("maxAccumulation", readShort(reader) * 0.1); // inches
+			productDescriptionData.Add("maxAccumulation", readShort(reader) * 0.1f); // inches
 			DateTime accumEndDate = DateTime.UnixEpoch.AddDays(readShort(reader)).AddSeconds(readShort(reader));
 			productDescriptionData.Add("accumulationEndDate", accumEndDate);
-			productDescriptionData.Add("meanFieldBias", readShort(reader) * 0.01);
+			productDescriptionData.Add("meanFieldBias", readShort(reader) * 0.01f);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.VerticallyIntegratedLiquid)
+		else if (code == Enums.MessageCode.VerticallyIntegratedLiquid)
 		{
-			productDescriptionData.Add("avsetTerminationElevationAngle", readShort(reader) * 0.1); // degrees, -1 to +45
+			productDescriptionData.Add("avsetTerminationElevationAngle", readShort(reader) * 0.1f); // degrees, -1 to +45
 			reader.BaseStream.Seek(32, SeekOrigin.Current); // skip 32 bytes, as they dont mean anything in this product
 			productDescriptionData.Add("maxVIL", readShort(reader)); // kg/m^2, 0 to 200
 			reader.BaseStream.Seek(4, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			reader.BaseStream.Seek(6, SeekOrigin.Current);
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalVerticallyIntegratedLiquid)
+		else if (code == Enums.MessageCode.DigitalVerticallyIntegratedLiquid)
 		{
-			productDescriptionData.Add("avsetTerminationAngle", readShort(reader) * 0.1); // degrees
+			productDescriptionData.Add("avsetTerminationAngle", readShort(reader) * 0.1f); // degrees
 
 			self.INTERNAL_debugLog($"[PRODUCT DESCRIPTION] HVIL: Building VIL coefficient values...", ConsoleColor.Yellow);
 			float linearScale = decodeHalfword(readShort(reader)); // halfword 31
@@ -95,13 +100,15 @@ public record Halfwords30_53
 			reader.BaseStream.Seek(4, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			plot.Add("rangeNmi", 248);
+			plot.Add("rangeKm", 459.296f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.SuperResolutionDigitalBaseReflectivity ||
-					self.Header.MessageCode == Enums.MessageCode.DigitalBaseReflectivity ||
-					self.Header.MessageCode == Enums.MessageCode.BaseReflectivityLongRange ||
-					self.Header.MessageCode == Enums.MessageCode.BaseReflectivityShortRange)
+		else if (code == Enums.MessageCode.SuperResolutionDigitalBaseReflectivity ||
+					code == Enums.MessageCode.DigitalBaseReflectivity ||
+					code == Enums.MessageCode.BaseReflectivityLongRange ||
+					code == Enums.MessageCode.BaseReflectivityShortRange)
 		{
-			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1); // degrees, -1 to +45
+			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1f); // degrees, -1 to +45
 			plot.Add("minDataValue", readShort(reader) / 10); // plot data per noaa documentation on page 36 build 23
 			plot.Add("dataIncrement", readShort(reader) / 10f); // this must be divided by 10 since its encoded as a short and not a float
 			plot.Add("dataLevels", readShort(reader));
@@ -110,31 +117,56 @@ public record Halfwords30_53
 			reader.BaseStream.Seek(6, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			if (code == Enums.MessageCode.SuperResolutionDigitalBaseReflectivity || code == Enums.MessageCode.DigitalBaseReflectivity)
+			{
+				plot.Add("rangeNmi", 248);
+				plot.Add("rangeKm", 459.296f);
+			}
+			else if (code == Enums.MessageCode.BaseReflectivityLongRange)
+			{
+				plot.Add("rangeNmi", 225);
+				plot.Add("rangeKm", 416.7f);
+			}
+			else if (code == Enums.MessageCode.BaseReflectivityShortRange)
+			{
+				plot.Add("rangeNmi", 48);
+				plot.Add("rangeKm", 88.896f);
+			}
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.LegacyBaseReflectivity1 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseReflectivity2 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseReflectivity3 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseReflectivity4 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseReflectivityLongRange ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseReflectivity6)
+		else if (code == Enums.MessageCode.LegacyBaseReflectivity1 ||
+					code == Enums.MessageCode.LegacyBaseReflectivity2 ||
+					code == Enums.MessageCode.LegacyBaseReflectivity3 ||
+					code == Enums.MessageCode.LegacyBaseReflectivity4 ||
+					code == Enums.MessageCode.LegacyBaseReflectivityLongRange ||
+					code == Enums.MessageCode.LegacyBaseReflectivity6)
 		{
-			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1); // degrees, -1 to +45
+			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1f); // degrees, -1 to +45
 			plot.Add("minDataValue", readShort(reader) / 10); // plot data per noaa documentation on page 36 build 23
 			plot.Add("dataIncrement", (float)readShort(reader));
 			plot.Add("dataLevels", readShort(reader));
 			reader.BaseStream.Seek(26, SeekOrigin.Current);
 			productDescriptionData.Add("maxReflectivity", readShort(reader)); // if this is -33, then data is unavailable
 			reader.BaseStream.Seek(10, SeekOrigin.Current);
+			if (code == Enums.MessageCode.LegacyBaseReflectivity1 || code == Enums.MessageCode.LegacyBaseReflectivity4)
+			{
+				plot.Add("rangeNmi", 124);
+				plot.Add("rangeKm", 229.648f);
+			}
+			else if(code == Enums.MessageCode.LegacyBaseReflectivity2 || code == Enums.MessageCode.LegacyBaseReflectivity3 || code == Enums.MessageCode.LegacyBaseReflectivityLongRange || code == Enums.MessageCode.LegacyBaseReflectivity6)
+			{
+				plot.Add("rangeNmi", 248);
+				plot.Add("rangeKm", 459.296f);
+			}
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.LegacyBaseVelocity1 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseVelocity2 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseVelocity3 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseVelocity4 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseVelocity5 ||
-					self.Header.MessageCode == Enums.MessageCode.LegacyBaseVelocity6 ||
-					self.Header.MessageCode == Enums.MessageCode.SuperResolutionDigitalBaseVelocity)
+		else if (code == Enums.MessageCode.LegacyBaseVelocity1 ||
+					code == Enums.MessageCode.LegacyBaseVelocity2 ||
+					code == Enums.MessageCode.LegacyBaseVelocity3 ||
+					code == Enums.MessageCode.LegacyBaseVelocity4 ||
+					code == Enums.MessageCode.LegacyBaseVelocity5 ||
+					code == Enums.MessageCode.LegacyBaseVelocity6 ||
+					code == Enums.MessageCode.SuperResolutionDigitalBaseVelocity)
 		{
-			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
+			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1f);
 			plot.Add("minDataValue", readShort(reader) / 10); // plot data per noaa documentation on page 36 build 23
 			plot.Add("dataIncrement", readShort(reader) / 10f);
 			plot.Add("dataLevels", readShort(reader));
@@ -145,10 +177,25 @@ public record Halfwords30_53
 			reader.BaseStream.Seek(2, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			if (code == Enums.MessageCode.LegacyBaseVelocity1 || code == Enums.MessageCode.LegacyBaseVelocity4)
+			{
+				plot.Add("rangeNmi", 32);
+				plot.Add("rangeKm", 59.264f);
+			}
+			else if (code == Enums.MessageCode.LegacyBaseVelocity2 || code == Enums.MessageCode.LegacyBaseVelocity5)
+			{
+				plot.Add("rangeNmi", 62);
+				plot.Add("rangeKm", 114.824f);
+			}
+			else if (code == Enums.MessageCode.LegacyBaseVelocity3 || code == Enums.MessageCode.LegacyBaseVelocity6)
+			{
+				plot.Add("rangeNmi", 124);
+				plot.Add("rangeKm", 229.648);
+			}
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.BaseVelocityDataArray)
+		else if (code == Enums.MessageCode.BaseVelocityDataArray)
 		{
-			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
+			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1f);
 			plot.Add("minDataValue", readShort(reader) / 10); // plot data per noaa documentation on page 36 build 23
 			plot.Add("dataIncrement", readShort(reader) / 10f);
 			plot.Add("dataLevels", readShort(reader));
@@ -158,17 +205,21 @@ public record Halfwords30_53
 			reader.BaseStream.Seek(4, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.EchoTops)
+		else if (code == Enums.MessageCode.EchoTops)
 		{
-			productDescriptionData.Add("avsetTerminationAngle", readShort(reader) * 0.1); // degrees
+			productDescriptionData.Add("avsetTerminationAngle", readShort(reader) * 0.1f); // degrees
 			reader.BaseStream.Seek(32, SeekOrigin.Current);
 			productDescriptionData.Add("maxEcho", readShort(reader)); // kfeet
 			reader.BaseStream.Seek(12, SeekOrigin.Current);
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.EnhancedEchoTops)
+		else if (code == Enums.MessageCode.EnhancedEchoTops)
 		{
-			productDescriptionData.Add("avsetTerminationAngle", readShort(reader) * 0.1); // degrees
+			productDescriptionData.Add("avsetTerminationAngle", readShort(reader) * 0.1f); // degrees
 			reader.BaseStream.Seek(32, SeekOrigin.Current);
 			productDescriptionData.Add("maxEcho", readShort(reader)); // kfeet
 			productDescriptionData.Add("artifactEditedRadialsInVolumeCount", readShort(reader));
@@ -176,8 +227,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("numberOfSpuriousPointsRemoved", readShort(reader));
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			plot.Add("rangeNmi", 186);
+			plot.Add("rangeKm", 344.472f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.StormRelativeVelocity1 || self.Header.MessageCode == Enums.MessageCode.StormRelativeVelocity2)
+		else if (code == Enums.MessageCode.StormRelativeVelocity1 || code == Enums.MessageCode.StormRelativeVelocity2)
 		{
 			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
 			reader.BaseStream.Seek(32, SeekOrigin.Current);
@@ -188,17 +241,29 @@ public record Halfwords30_53
 			productDescriptionData.Add("averageSpeedOfStorms", readShort(reader) * 0.1); // knots
 			productDescriptionData.Add("averageDirectionOfStorms", readShort(reader) * 0.1); // degrees
 			reader.BaseStream.Seek(2, SeekOrigin.Current);
+			if (code == Enums.MessageCode.StormRelativeVelocity1)
+			{
+				plot.Add("rangeNmi", 27);
+				plot.Add("rangeKm", 50.004f);
+			}
+			else if (code == Enums.MessageCode.StormRelativeVelocity1)
+			{
+				plot.Add("rangeNmi", 124);
+				plot.Add("rangeKm", 229.648f);
+			}
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.HydrometeorClassification)
+		else if (code == Enums.MessageCode.HydrometeorClassification)
 		{
-			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
+			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1f);
 			reader.BaseStream.Seek(32, SeekOrigin.Current);
 			productDescriptionData.Add("modeFilterSize", readShort(reader));
 			reader.BaseStream.Seek(6, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.HybridHydrometeorClassification)
+		else if (code == Enums.MessageCode.HybridHydrometeorClassification)
 		{
 			reader.BaseStream.Seek(36, SeekOrigin.Current);
 			productDescriptionData.Add("modeFilterSize", readShort(reader));
@@ -206,8 +271,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("highestElevationUsed", readShort(reader) * 0.1);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.TornadoVortexSignature)
+		else if (code == Enums.MessageCode.TornadoVortexSignature)
 		{
 			reader.BaseStream.Seek(32, SeekOrigin.Current);
 			productDescriptionData.Add("numberOfTVS", readShort(reader));
@@ -216,21 +283,21 @@ public record Halfwords30_53
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.MesocycloneDetection)
+		else if (code == Enums.MessageCode.MesocycloneDetection)
 		{
 			productDescriptionData.Add("minimumDisplayFilterStrengthRank", readShort(reader));
 			reader.BaseStream.Seek(46, SeekOrigin.Current);
 		}
 		else if (
-			self.Header.MessageCode == Enums.MessageCode.CompositeReflectivity1 ||
-			self.Header.MessageCode == Enums.MessageCode.CompositeReflectivity2 ||
-			self.Header.MessageCode == Enums.MessageCode.CompositeReflectivity3 ||
-			self.Header.MessageCode == Enums.MessageCode.CompositeReflectivity4 ||
-			self.Header.MessageCode == Enums.MessageCode.HighLayerCompositeReflectivity ||
-			self.Header.MessageCode == Enums.MessageCode.LayerCompositeReflectivity ||
-			self.Header.MessageCode == Enums.MessageCode.LowLayerCompositeReflectivity ||
-			self.Header.MessageCode == Enums.MessageCode.MidlayerCompositeReflectivity ||
-			self.Header.MessageCode == Enums.MessageCode.UserSelectableLayerCompositeReflectivity)
+			code == Enums.MessageCode.CompositeReflectivity1 ||
+			code == Enums.MessageCode.CompositeReflectivity2 ||
+			code == Enums.MessageCode.CompositeReflectivity3 ||
+			code == Enums.MessageCode.CompositeReflectivity4 ||
+			code == Enums.MessageCode.HighLayerCompositeReflectivity ||
+			code == Enums.MessageCode.LayerCompositeReflectivity ||
+			code == Enums.MessageCode.LowLayerCompositeReflectivity ||
+			code == Enums.MessageCode.MidlayerCompositeReflectivity ||
+			code == Enums.MessageCode.UserSelectableLayerCompositeReflectivity)
 		{
 			productDescriptionData.Add("avsetTerminationElevationAngle", readShort(reader) * 0.1);
 			reader.BaseStream.Seek(32, SeekOrigin.Current);
@@ -238,8 +305,24 @@ public record Halfwords30_53
 			reader.BaseStream.Seek(3, SeekOrigin.Current);
 			productDescriptionData.Add("calibrationConstant", readInt(reader));
 			reader.BaseStream.Seek(5, SeekOrigin.Current);
+			if (code == Enums.MessageCode.CompositeReflectivity1 ||
+				code == Enums.MessageCode.CompositeReflectivity3 ||
+				code == Enums.MessageCode.HighLayerCompositeReflectivity ||
+				code == Enums.MessageCode.LayerCompositeReflectivity ||
+				code == Enums.MessageCode.LowLayerCompositeReflectivity ||
+				code == Enums.MessageCode.MidlayerCompositeReflectivity ||
+				code == Enums.MessageCode.UserSelectableLayerCompositeReflectivity)
+			{
+				plot.Add("rangeNmi", 124);
+				plot.Add("rangeKm", 229.648f);
+			}
+			else if (code == Enums.MessageCode.CompositeReflectivity2 || code == Enums.MessageCode.CompositeReflectivity4)
+			{
+				plot.Add("rangeNmi", 247);
+				plot.Add("rangeKm", 459.296f);
+			}
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalCorrelationCoefficient)
+		else if (code == Enums.MessageCode.DigitalCorrelationCoefficient)
 		{
 			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
 			plot.Add("scale", readFloat(reader));
@@ -254,8 +337,10 @@ public record Halfwords30_53
 			reader.BaseStream.Seek(4, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			plot.Add("rangeNmi", 162);
+			plot.Add("rangeKm", 300.024f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalDifferentialReflectivity)
+		else if (code == Enums.MessageCode.DigitalDifferentialReflectivity)
 		{
 			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
 			plot.Add("scale", readFloat(reader));
@@ -270,8 +355,10 @@ public record Halfwords30_53
 			reader.BaseStream.Seek(4, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader));
+			plot.Add("rangeNmi", 162);
+			plot.Add("rangeKm", 300.024f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalAccumulationArray)
+		else if (code == Enums.MessageCode.DigitalAccumulationArray)
 		{
 			productDescriptionData.Add("nullProductFlag", readShort(reader));
 			plot.Add("scale", readFloat(reader));
@@ -288,8 +375,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("meanFieldBias", readShort(reader) * 0.01);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalPrecipitationArray)
+		else if (code == Enums.MessageCode.DigitalPrecipitationArray)
 		{
 			productDescriptionData.Add("nullProductFlag", readShort(reader));
 			plot.Add("minDataValue", readShort(reader) / 10);
@@ -302,8 +391,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("accumulationEndTime", accumEndDate.AddSeconds(readShort(reader)));
 			productDescriptionData.Add("meanFieldBias", readShort(reader) * 0.01);
 			reader.BaseStream.Seek(6, SeekOrigin.Current);
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalHybridScanReflectivity || self.Header.MessageCode == Enums.MessageCode.HybridScanReflectivity)
+		else if (code == Enums.MessageCode.DigitalHybridScanReflectivity || code == Enums.MessageCode.HybridScanReflectivity)
 		{
 			reader.BaseStream.Seek(32, SeekOrigin.Current);
 			productDescriptionData.Add("maxReflectivity", readShort(reader));
@@ -313,14 +404,16 @@ public record Halfwords30_53
 			productDescriptionData.Add("averageTimeOfHybridScan", readShort(reader));
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.RadarStatusLog)
+		else if (code == Enums.MessageCode.RadarStatusLog)
 		{
 			reader.BaseStream.Seek(42, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalInstantaneousPrecipitationRate)
+		else if (code == Enums.MessageCode.DigitalInstantaneousPrecipitationRate)
 		{
 			productDescriptionData.Add("precipitationDetetectedFlag", readShort(reader) * 0.001);
 			plot.Add("scale", readFloat(reader));
@@ -336,8 +429,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("meanFieldBias", readUShort(reader) * 0.01);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalSpecificDifferentialPhase)
+		else if (code == Enums.MessageCode.DigitalSpecificDifferentialPhase)
 		{
 			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1);
 			plot.Add("scale", readFloat(reader));
@@ -352,8 +447,10 @@ public record Halfwords30_53
 			reader.BaseStream.Seek(4, SeekOrigin.Current);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
+			plot.Add("rangeNmi", 162);
+			plot.Add("rangeKm", 300.024f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.OneHourAccumulation)
+		else if (code == Enums.MessageCode.OneHourAccumulation)
 		{
 			productDescriptionData.Add("nullProductFlag", readShort(reader));
 			reader.BaseStream.Seek(32, SeekOrigin.Current);
@@ -363,8 +460,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("accumulationEndTime", accumEndDate.AddSeconds(readShort(reader)));
 			productDescriptionData.Add("meanFieldBias", readShort(reader) * 0.01);
 			reader.BaseStream.Seek(4, SeekOrigin.Current);
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalUserSelectableTotalAccumulation)
+		else if (code == Enums.MessageCode.DigitalUserSelectableTotalAccumulation)
 		{
 			reader.BaseStream.Seek(2, SeekOrigin.Current);
 			plot.Add("scale", readFloat(reader));
@@ -381,8 +480,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("meanFieldBias", readShort(reader));
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalOneHourDifferenceAccumulation)
+		else if (code == Enums.MessageCode.DigitalOneHourDifferenceAccumulation)
 		{
 			reader.BaseStream.Seek(2, SeekOrigin.Current);
 			plot.Add("scale", readFloat(reader));
@@ -399,8 +500,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("minAccumulationDifference", readShort(reader) * 0.1);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.DigitalStormTotalDifferenceAccumulation || self.Header.MessageCode == Enums.MessageCode.DigitalStormTotalAccumulation)
+		else if (code == Enums.MessageCode.DigitalStormTotalDifferenceAccumulation || code == Enums.MessageCode.DigitalStormTotalAccumulation)
 		{
 			productDescriptionData.Add("nullProductFlag", readShort(reader));
 			plot.Add("scale", readFloat(reader));
@@ -417,8 +520,10 @@ public record Halfwords30_53
 			productDescriptionData.Add("minAccumulationDifference", readShort(reader) * 0.1);
 			productDescriptionData.Add("compressionMethod", readShort(reader));
 			productDescriptionData.Add("uncompressedSize", (readUShort(reader) << 16) + readUShort(reader)); // bytes
+			plot.Add("rangeNmi", 124);
+			plot.Add("rangeKm", 229.648f);
 		}
-		else if (self.Header.MessageCode == Enums.MessageCode.VelocityAzimuthDisplayWindProfile)
+		else if (code == Enums.MessageCode.VelocityAzimuthDisplayWindProfile)
 		{
 			reader.BaseStream.Seek(34, SeekOrigin.Current);
 			productDescriptionData.Add("maxWindSpeed", readShort(reader)); // knots
