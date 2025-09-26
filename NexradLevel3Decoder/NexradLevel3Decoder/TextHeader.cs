@@ -151,7 +151,7 @@ public record TextHeader
 		{ "KJGX", ("Robins AFB", "Georgia", "GA") },
 		{ "KTLH", ("Tallahassee", "Florida", "FL") },
 		{ "KDFX", ("Laughlin AFB", "Texas", "TX") },
-		{ "KILX", ("Licoln", "Illinois", "IL") },
+		{ "KILX", ("Lincoln", "Illinois", "IL") },
 		{ "KLZK", ("Little Rock", "Arkansas", "AR") },
 		{ "KVTX", ("Los Angeles", "California", "CA") },
 		{ "KLVX", ("Louisville", "Kentucky", "KY") },
@@ -224,3 +224,4 @@ public record TextHeader
 		reader.BaseStream.Seek(3, SeekOrigin.Current);
 	}
 }
+
