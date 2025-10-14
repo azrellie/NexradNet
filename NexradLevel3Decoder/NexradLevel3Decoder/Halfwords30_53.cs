@@ -170,6 +170,8 @@ public record Halfwords30_53
 			plot.Add("minDataValue", readShort(reader) / 10); // plot data per noaa documentation on page 36 build 23
 			plot.Add("dataIncrement", readShort(reader) / 10f);
 			plot.Add("dataLevels", readShort(reader));
+			plot.Add("rangeNmi", 162);
+			plot.Add("rangeKm", 300.024f);
 			reader.BaseStream.Seek(26, SeekOrigin.Current);
 			productDescriptionData.Add("maxNegativeVelocity", readShort(reader));
 			productDescriptionData.Add("maxPositiveVelocity", readShort(reader));
@@ -246,7 +248,7 @@ public record Halfwords30_53
 				plot.Add("rangeNmi", 27);
 				plot.Add("rangeKm", 50.004f);
 			}
-			else if (code == Enums.MessageCode.StormRelativeVelocity1)
+			else if (code == Enums.MessageCode.StormRelativeVelocity2)
 			{
 				plot.Add("rangeNmi", 124);
 				plot.Add("rangeKm", 229.648f);
