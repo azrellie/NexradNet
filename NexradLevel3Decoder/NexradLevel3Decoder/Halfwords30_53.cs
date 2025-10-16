@@ -533,6 +533,30 @@ public record Halfwords30_53
 			productDescriptionData.Add("altitudeOfMaxSpeed", readShort(reader) * 0.01); // feet * 0.01 ranging 0 to 70
 			reader.BaseStream.Seek(8, SeekOrigin.Current);
 		}
+		else if (code == Enums.MessageCode.LegacyBaseSpectrumWidth1 || code == Enums.MessageCode.LegacyBaseSpectrumWidth2 || code == Enums.MessageCode.LegacyBaseSpectrumWidth3)
+		{
+			productDescriptionData.Add("elevationAngle", readShort(reader) * 0.1f);
+			reader.BaseStream.Seek(32, SeekOrigin.Current);
+			productDescriptionData.Add("maxSpectrumWidth", readShort(reader)); // knots
+			reader.BaseStream.Seek(6, SeekOrigin.Current);
+			productDescriptionData.Add("deltaTime", readShort(reader));
+			reader.BaseStream.Seek(4, SeekOrigin.Current);
+			if (code == Enums.MessageCode.LegacyBaseSpectrumWidth1)
+			{
+				plot.Add("rangeNmi", 32);
+				plot.Add("rangeKm", 59.264f);
+			}
+			else if (code == Enums.MessageCode.LegacyBaseSpectrumWidth2)
+			{
+				plot.Add("rangeNmi", 62);
+				plot.Add("rangeKm", 114.824f);
+			}
+			else if (code == Enums.MessageCode.LegacyBaseSpectrumWidth3)
+			{
+				plot.Add("rangeNmi", 124);
+				plot.Add("rangeKm", 229.648f);
+			}
+		}
 		else
 		{
 			self.INTERNAL_debugLog("No data found in halfwords 30-53. This product may not be supported. Advancing...", ConsoleColor.Yellow);
