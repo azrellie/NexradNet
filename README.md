@@ -4,6 +4,13 @@ For sources of Nexrad level 3 data, refer to these urls:
 3. https://console.cloud.google.com/storage/browser/gcp-public-data-nexrad-l3;tab=objects?pli=1&invt=AbulJA&prefix=&forceOnObjectsSortingFiltering=false
 4. https://console.cloud.google.com/storage/browser/gcp-public-data-nexrad-l3-realtime;tab=objects?inv=1&invt=Ab30-A&prefix=&forceOnObjectsSortingFiltering=false&pageState=(%22StorageObjectListTable%22:(%22f%22:%22%255B%255D%22)) (for real time level 3 from Google)
 
+# NuGet Install
+This package is on NuGet.org and can be found here https://www.nuget.org/packages/Nexrad.NET/.
+
+To add it to a project via the package manager console, run this `dotnet add package Nexrad.NET --version 1.0.6` (latest version as of 10/16/25).
+
+Or add it in your package reference in your project file `<PackageReference Include="Nexrad.NET" Version="1.0.6" />`
+
 # Nexrad.NET
 ---
 Nexrad.NET is a C# library created for the purpose of reading and processing NEXRAD Level 3 radar files.
@@ -53,3 +60,4 @@ Basic overview of the bit stucture:
 
 Setting any of the bits to 0 will make that block not get processed. Can be used to save memory and processing time if you do not need the other blocks.
 ```
+
