@@ -7,9 +7,9 @@ For sources of Nexrad level 3 data, refer to these urls:
 # NuGet Install
 This package is on NuGet.org and can be found here https://www.nuget.org/packages/Nexrad.NET/.
 
-To add it to a project via the package manager console, run this `dotnet add package Nexrad.NET --version 1.0.6` (latest version as of 10/16/25).
+To add it to a project via the package manager console, run this `dotnet add package Nexrad.NET --version 1.1.0` (latest version as of 10/16/25).
 
-Or add it in your package reference in your project file `<PackageReference Include="Nexrad.NET" Version="1.0.6" />`
+Or add it in your package reference in your project file `<PackageReference Include="Nexrad.NET" Version="1.1.0" />`
 
 # Nexrad.NET
 ---
