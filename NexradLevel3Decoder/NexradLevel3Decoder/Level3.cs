@@ -1,5 +1,3 @@
-using SharpCompress.Archives;
-using SharpCompress.Compressors;
 using SharpCompress.Compressors.BZip2;
 using System.Globalization;
 using System.IO.Compression;
