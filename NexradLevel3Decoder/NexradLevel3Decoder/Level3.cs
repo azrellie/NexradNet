@@ -1,4 +1,6 @@
-﻿using SevenZipExtractor;
+using SharpCompress.Archives;
+using SharpCompress.Compressors;
+using SharpCompress.Compressors.BZip2;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
@@ -10,9 +12,8 @@ namespace Azrellie.Meteorology.NexradNet.Level3;
 TODO:
 add support for storm structure NSS
 add support for melting layer ML
-add support for digital precipitation array DPA
 add support for power removed control
-add more product enums
+add more product enums?
 */
 public record Level3
 {
@@ -189,7 +190,7 @@ public record Level3
 				reader.BaseStream.CopyTo(compressedData);
 				compressedData.Position = 0;
 
-				DeflateStream deflate = new(compressedData, CompressionMode.Decompress);
+				DeflateStream deflate = new(compressedData, System.IO.Compression.CompressionMode.Decompress);
 				deflate.CopyTo(decompressedData);
 				decompressedData.Position = 0;
 			}
@@ -250,11 +251,13 @@ public record Level3
 			BinaryReader symbologyReader;
 			ProductDescription.ProductData2.productDescriptionData.TryGetValue("compressionMethod", out dynamic? value);
 			bool isDataCompressed = value != 0 && value != null; // check if compression method is 0 or null (no compression applied)
-
-			byte[] bzipCompressionHeader = read(reader, 4); // check for bzip compression in the product
-			if (bzipCompressionHeader[0] == 0x42 && bzipCompressionHeader[1] == 0x5A && bzipCompressionHeader[2] == 0x68 && bzipCompressionHeader[3] >= 0x31 && bzipCompressionHeader[3] <= 0x39)
-				isDataCompressed = true;
-			reader.BaseStream.Position -= 4;
+			if (isDataCompressed)
+			{
+				byte[] bzipCompressionHeader = read(reader, 4); // check for bzip compression in the product
+				if (bzipCompressionHeader[0] == 0x42 && bzipCompressionHeader[1] == 0x5A && bzipCompressionHeader[2] == 0x68 && bzipCompressionHeader[3] >= 0x31 && bzipCompressionHeader[3] <= 0x39)
+					isDataCompressed = true;
+				reader.BaseStream.Position -= 4;
+			}
 
 			if (!isDataCompressed)
 			{
@@ -276,9 +279,8 @@ public record Level3
 				MemoryStream decompressedData = new();
 
 				// decompress data
-				using ArchiveFile zipReader = new(compressedData);
-				foreach (Entry entry in zipReader.Entries)
-					entry.Extract(decompressedData);
+				var stream = BZip2Stream.Create(compressedData, SharpCompress.Compressors.CompressionMode.Decompress, false);
+				stream.CopyTo(decompressedData);
 
 				// create a new stream and copy the file header first, then the decompressed data
 				reader.BaseStream.Position = 0;
@@ -290,7 +292,7 @@ public record Level3
 				decompressedData.Position = 0;
 				decompressedData.CopyTo(combinedStream);
 
-				combinedStream.Position = pos;  // ready for reading symbology
+				combinedStream.Position = pos; // ready for reading symbology
 				symbologyReader = new(combinedStream); // skip to symbology by starting from the beginning reader position to begin reading symbology
 			}
 
@@ -377,7 +379,7 @@ public record Level3
 	[
 		Enums.MessageCode.StormStructure,
 		Enums.MessageCode.MeltingLayer,
-		Enums.MessageCode.DigitalPrecipitationArray,
+		//Enums.MessageCode.DigitalPrecipitationArray,
 		Enums.MessageCode.SupplementalPrecipitationData
 	];
 }
