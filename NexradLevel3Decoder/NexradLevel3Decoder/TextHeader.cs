@@ -173,11 +173,42 @@ public record TextHeader
 		{ "KEMX", ("Tucson", "Arizona", "AZ") },
 		{ "KINX", ("Tulsa / Oklahoma area", "Oklahoma", "OK") },
 		{ "KVNX", ("Vance AFB", "Oklahoma", "OK") },
-		{ "KVBX", ("Vandenberg AFB", "California", "CA") }
+		{ "KVBX", ("Vandenberg AFB", "California", "CA") },
+		{ "TADW", ("Washington Dulles", "Virginia", "VA") },
+		{ "TBOS", ("Boston Logan", "Massachusetts", "MA") },
+		{ "TATL", ("Atlanta Hartsfield", "Georgia", "GA") },
+		{ "TORD", ("Chicago O'Hare", "Illinois", "IL") },
+		{ "TMDW", ("Chicago Midway", "Illinois", "IL") },
+		{ "TDEN", ("Denver", "Colorado", "CO") },
+		{ "THOU", ("Houston Hobby", "Texas", "TX") },
+		{ "TIAH", ("Houston Intercontinental", "Texas", "TX") },
+		{ "TDFW", ("Dallas / Fort Worth", "Texas", "TX") },
+		{ "TMCI", ("Kansas City", "Missouri", "MO") },
+		{ "TSTL", ("St. Louis", "Missouri", "MO") },
+		{ "TMSY", ("New Orleans", "Louisiana", "LA") },
+		{ "TMIA", ("Miami", "Florida", "FL") },
+		{ "TTPA", ("Tampa", "Florida", "FL") },
+		{ "TPBI", ("West Palm Beach", "Florida", "FL") },
+		{ "TPHL", ("Philadelphia", "Pennsylvania", "PA") },
+		{ "TPHX", ("Phoenix", "Arizona", "AZ") },
+		{ "TPDX", ("Portland", "Oregon", "OR") },
+		{ "TSEA", ("Seattle", "Washington", "WA") },
+		{ "TSFO", ("San Francisco", "California", "CA") },
+		{ "TSAN", ("San Diego", "California", "CA") },
+		{ "TCMH", ("Columbus", "Ohio", "OH") },
+		{ "TCVG", ("Cincinnati", "Ohio", "OH") },
+		{ "TMSP", ("Minneapolis / St. Paul", "Minnesota", "MN") },
+		{ "TDTW", ("Detroit", "Michigan", "MI") },
+		{ "TSJU", ("San Juan", "Puerto Rico", "PR") }
 	};
 
 	public TextHeader(BinaryReader reader, int textHeaderLength, bool zlib)
 	{
+		var duplicates = radarIdToLocation
+			.GroupBy(kvp => kvp.Value)
+			.Where(g => g.Count() > 1)
+			.ToDictionary(g => g.Key, g => g.Select(x => x.Key).ToArray());
+		Console.WriteLine(string.Join(", ", duplicates));
 		if (!zlib)
 		{
 			int bytesToSkip = textHeaderLength % 30;
@@ -196,6 +227,7 @@ public record TextHeader
 			reader.BaseStream.Seek(1, SeekOrigin.Current);
 
 		SiteId = readString(reader, 4);
+
 		reader.BaseStream.Seek(1, SeekOrigin.Current);
 		string timeStamp = readString(reader, 6);
 		DateTime utcNow = DateTime.UtcNow;
@@ -206,8 +238,8 @@ public record TextHeader
 			TimeStamp = new(utcNow.Year, utcNow.Month, day, hour, min, 0);
 		reader.BaseStream.Seek(3, SeekOrigin.Current);
 		DataType = readString(reader, 3);
-		var radarStationId = readString(reader, 3);
 
+		var radarStationId = readString(reader, 3);
 		string stationMatch = string.Empty;
 		foreach (var entry in radarIdToLocation.Keys)
 			if (radarStationId == entry[1..])
@@ -224,4 +256,3 @@ public record TextHeader
 		reader.BaseStream.Seek(3, SeekOrigin.Current);
 	}
 }
-
