@@ -26,6 +26,15 @@ BinaryReader reader = new(File.OpenRead("super_res_base_ref_file"));
 Level3 level3 = new(ref reader);
 ```
 
+### Comparison
+Level3 objects can be compared to check if they are the same radar data. This comparison can be done directly because the Level3 object is a record that does value based equality.
+```cs
+BinaryReader reader = new(File.OpenRead("super_res_base_ref_file"));
+Level3 level3_1 = new(ref reader);
+Level3 level3_2 = new(ref reader);
+Console.WriteLine(level3_1 == level3_2); // will output "true" because both of these contain the same radar data
+```
+
 ### Arguments
 The Level3 object has different arguments. They are specified as:
 ```cs
