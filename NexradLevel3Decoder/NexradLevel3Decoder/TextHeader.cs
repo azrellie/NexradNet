@@ -204,11 +204,6 @@ public record TextHeader
 
 	public TextHeader(BinaryReader reader, int textHeaderLength, bool zlib)
 	{
-		var duplicates = radarIdToLocation
-			.GroupBy(kvp => kvp.Value)
-			.Where(g => g.Count() > 1)
-			.ToDictionary(g => g.Key, g => g.Select(x => x.Key).ToArray());
-		Console.WriteLine(string.Join(", ", duplicates));
 		if (!zlib)
 		{
 			int bytesToSkip = textHeaderLength % 30;
