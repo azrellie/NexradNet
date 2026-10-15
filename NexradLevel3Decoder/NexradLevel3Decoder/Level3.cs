@@ -225,10 +225,10 @@ public record Level3
 		// product support validation
 		foreach (Enums.MessageCode code in unsupportedProducts)
 			if (Header.MessageCode == code)
-				{
-					INTERNAL_debugLog($"Unsupported product detected.\nProduct {Header.MessageCode} (code={(int)Header.MessageCode}) is not yet supported.", ConsoleColor.Red);
-					throw new($"Product {Header.MessageCode} (code={(int)Header.MessageCode}) is not yet supported.");
-				}
+			{
+				INTERNAL_debugLog($"Unsupported product detected.\nProduct {Header.MessageCode} (code={(int)Header.MessageCode}) is not yet supported.", ConsoleColor.Red);
+				throw new($"Product {Header.MessageCode} (code={(int)Header.MessageCode}) is not yet supported.");
+			}
 
 		INTERNAL_debugLog($"Product \"{Header.MessageCode}\" detected.", ConsoleColor.Yellow);
 		INTERNAL_debugLog("Processing product description...", ConsoleColor.Yellow);
