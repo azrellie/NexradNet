@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Azrellie.Meteorology.NexradNet.Level3;
 
-internal class Util
+internal static class Util
 {
 	/// <summary>
 	/// Reads a short from a binary reader in big endian.
@@ -84,11 +84,20 @@ internal class Util
 
 	public static bool usesZlibCompression(BinaryReader reader, int headerSkip)
 	{
-		reader.BaseStream.Seek(headerSkip, SeekOrigin.Begin);
-		byte b = readByte(reader);
-		byte b2 = readByte(reader);
-		reader.BaseStream.Position = 0;
-		return b == 0x78 && b2 == 0xDA;
+		if (headerSkip < 0 || headerSkip + 2 > reader.BaseStream.Length) return false;
+		long originalPos = reader.BaseStream.Position;
+		try
+		{
+			reader.BaseStream.Seek(headerSkip, SeekOrigin.Begin);
+			byte b = readByte(reader);
+			byte b2 = readByte(reader);
+			reader.BaseStream.Position = 0;
+			return b == 0x78 && b2 == 0xDA;
+		}
+		finally
+		{
+			reader.BaseStream.Position = originalPos;
+		}
 	}
 
 	public static bool hasMultipleZlibChunks(BinaryReader reader)

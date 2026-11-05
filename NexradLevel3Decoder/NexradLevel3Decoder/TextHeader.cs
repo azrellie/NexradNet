@@ -1,4 +1,4 @@
-using static Azrellie.Meteorology.NexradNet.Level3.Util;
+﻿using static Azrellie.Meteorology.NexradNet.Level3.Util;
 
 namespace Azrellie.Meteorology.NexradNet.Level3;
 
@@ -206,6 +206,8 @@ public record TextHeader
 	{
 		if (!zlib)
 		{
+			if (textHeaderLength == -1)
+				textHeaderLength = 0;
 			int bytesToSkip = textHeaderLength % 30;
 			reader.BaseStream.Seek(bytesToSkip, SeekOrigin.Current);
 		}
@@ -213,7 +215,8 @@ public record TextHeader
 		FileType = readString(reader, 6);
 
 		// invalid format. abort
-		if (!FileType.Contains("SDUS") && !zlib)
+		Console.WriteLine(DataType);
+		if (!FileType.Contains("SDUS") && !FileType.Contains("NOUS") && !zlib)
 			throw new("File format is not valid for parsing. Did you check the text header length?");
 
 		if (zlib)

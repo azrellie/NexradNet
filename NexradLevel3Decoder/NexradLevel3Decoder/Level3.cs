@@ -1,4 +1,4 @@
-using SharpCompress.Compressors.BZip2;
+﻿using SharpCompress.Compressors.BZip2;
 using System.Globalization;
 using System.IO.Compression;
 using System.Text;
@@ -169,6 +169,8 @@ public record Level3
 			reader.BaseStream.Position = 0;
 		}
 
+		bool isFtmProduct = Encoding.ASCII.GetString(reader.ReadBytes(128)).Contains("FTM");
+		reader.BaseStream.Position = 0;
 		debugLoggingEnabled = enableDebugging;
 
 		INTERNAL_debugLog("Checking for zlib compression...", ConsoleColor.Yellow);
@@ -176,19 +178,22 @@ public record Level3
 		if (zlib)
 		{
 			INTERNAL_debugLog("Product is zlib compressed. Decompressing...", ConsoleColor.Yellow);
-			reader.BaseStream.Seek(textHeaderLength + 2, SeekOrigin.Begin);
+			reader.BaseStream.Seek(textHeaderLength + 2, SeekOrigin.Begin); // skip the header for decompression
 
 			MemoryStream decompressedData = new();
 
 			if (hasMultipleZlibChunks(reader))
+			{
 				decompressedData = decompressZlibChunks(reader, this);
+				Console.WriteLine(decompressedData.Length);
+			}
 			else
 			{
 				MemoryStream compressedData = new();
 				reader.BaseStream.CopyTo(compressedData);
 				compressedData.Position = 0;
 
-				DeflateStream deflate = new(compressedData, System.IO.Compression.CompressionMode.Decompress);
+				DeflateStream deflate = new(compressedData, CompressionMode.Decompress);
 				deflate.CopyTo(decompressedData);
 				decompressedData.Position = 0;
 			}
@@ -207,7 +212,7 @@ public record Level3
 		if (TextHeader.DataType == "FTM")
 		{
 			INTERNAL_debugLog($"Free text message product detected. Reading text...", ConsoleColor.Yellow);
-			FreeTextMessage = Encoding.ASCII.GetString(read(reader, reader.BaseStream.Length - reader.BaseStream.Position));
+			FreeTextMessage = Encoding.ASCII.GetString(read(reader, reader.BaseStream.Length - reader.BaseStream.Position)).Trim();
 			INTERNAL_debugLog("Finished processing free text message.\nText:\n" + FreeTextMessage, ConsoleColor.Yellow);
 			Console.ForegroundColor = ConsoleColor.Gray;
 			Console.WriteLine();
@@ -225,16 +230,17 @@ public record Level3
 		// product support validation
 		foreach (Enums.MessageCode code in unsupportedProducts)
 			if (Header.MessageCode == code)
-			{
-				INTERNAL_debugLog($"Unsupported product detected.\nProduct {Header.MessageCode} (code={(int)Header.MessageCode}) is not yet supported.", ConsoleColor.Red);
-				throw new($"Product {Header.MessageCode} (code={(int)Header.MessageCode}) is not yet supported.");
-			}
+				{
+					INTERNAL_debugLog($"Unsupported product detected.\nProduct {Header.MessageCode} (code={(int)Header.MessageCode}) is not yet supported.", ConsoleColor.Red);
+					throw new($"Product {Header.MessageCode} (code={(int)Header.MessageCode}) is not yet supported.");
+				}
 
 		INTERNAL_debugLog($"Product \"{Header.MessageCode}\" detected.", ConsoleColor.Yellow);
 		INTERNAL_debugLog("Processing product description...", ConsoleColor.Yellow);
 		long p2 = reader.BaseStream.Position;
 		ProductDescription = new(reader, this);
 		ProductDescriptionLength = (int)(reader.BaseStream.Position - p2);
+		Console.WriteLine(ProductDescription.ProductData2.productDescriptionData["uncompressedSize"]);
 
 		if (ProductDescription.SymbologyOffset != 0 && (processingStages & (1 << 0)) != 0)
 		{
