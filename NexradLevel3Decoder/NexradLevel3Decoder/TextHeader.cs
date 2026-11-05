@@ -215,7 +215,6 @@ public record TextHeader
 		FileType = readString(reader, 6);
 
 		// invalid format. abort
-		Console.WriteLine(DataType);
 		if (!FileType.Contains("SDUS") && !FileType.Contains("NOUS") && !zlib)
 			throw new("File format is not valid for parsing. Did you check the text header length?");
 
